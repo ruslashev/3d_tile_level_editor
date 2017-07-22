@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+typedef std::vector<std::vector<std::vector<int>>> map_t;
+
 static void new_map();
 static void start_screen();
 static void ask_dimensions(int *width, int *height, int *depth);
@@ -52,8 +54,6 @@ get_choice:
       break;
   }
 }
-
-typedef std::vector<std::vector<std::vector<int>>> map_t;
 
 static void new_map() {
   int width, height, depth;
@@ -167,6 +167,7 @@ static void new_map() {
           strcpy(filename, "level");
         std::string filename_str(filename);
 
+#if 0
         // .vxl text format
         std::ofstream ofs_vxl(filename_str + ".vxl", std::ofstream::binary);
         if (!ofs_vxl) {
@@ -184,6 +185,7 @@ static void new_map() {
                   << std::endl;
         ofs_vxl << std::endl;
         ofs_vxl.close();
+#endif
 
         // .qkm binary format
         std::ofstream ofs_bin(filename_str + ".qkm", std::ofstream::binary);
@@ -195,23 +197,26 @@ static void new_map() {
         struct {
           char magic[9] = "QEIKEMAP";
           uint8_t version = 1;
-        } signature;
-        ofs_bin.write((char*)&signature, sizeof(signature));
-        uint32_t tiles = 0;
+          uint32_t tiles = 0;
+          uint16_t width, height, depth;
+        } header;
+        header.width = width;
+        header.height = height;
+        header.depth = depth;
         for (int z = 0; z < depth; z++)
           for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
               if (map[z][y][x])
-                ++tiles;
-        ofs_bin.write((char*)&tiles, sizeof(tiles));
+                ++header.tiles;
+        ofs_bin.write((char*)&header, sizeof(header));
         for (int z = 0; z < depth; z++)
           for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
               if (map[z][y][x]) {
-                uint16_t x16 = x, y16 = y, z16 = z;
-                ofs_bin.write((char*)&x16, sizeof(x16));
-                ofs_bin.write((char*)&y16, sizeof(y16));
-                ofs_bin.write((char*)&z16, sizeof(z16));
+                uint8_t x8 = x, y8 = y, z8 = z;
+                ofs_bin.write((char*)&x8, sizeof(x8));
+                ofs_bin.write((char*)&y8, sizeof(y8));
+                ofs_bin.write((char*)&z8, sizeof(z8));
               }
         ofs_bin.close();
 
