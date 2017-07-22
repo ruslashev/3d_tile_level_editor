@@ -68,11 +68,12 @@ static void new_map() {
       for (int x = 0; x < width; x++)
         map[z][y][x] = 0;
 
-  const int xof = 1, yof = 2;
-  WINDOW *mapw = newwin(depth + 2, width * 2 + 2 + 1, yof, xof);
+  const int xof = 1, yof = 0;
+  WINDOW *mapw = newwin(depth + 2, width * 2 + 2 + 1, yof + 2, xof);
   box(mapw, 0, 0);
   struct { int x, y; } cursor = { 0, 0 };
 
+  // draw help text
   const int help_text_lines = 8;
   const char help_text[help_text_lines][256] = {
     "Instructions:",
@@ -85,13 +86,14 @@ static void new_map() {
     "q          - quit"
   };
   for (int i = 0; i < help_text_lines; ++i)
-    mvaddstr(yof + i, xof + width * 2 + 2 + 1 + 2, help_text[i]);
+    mvaddstr(yof + i + 2, xof + width * 2 + 2 + 1 + 2, help_text[i]);
 
   int height_level = 0, input = 0;
 
   while (input != 'q') {
-    mvprintw(0, 1, "Height level: %d", height_level, cursor.x, cursor.y);
+    mvprintw(yof, xof, "Height level: %d", height_level, cursor.x, cursor.y);
 
+    // draw map and numbers to the right
     for (int z = 0; z < depth; ++z) {
       mvwprintw(mapw, z + 1, 0, "%-2d", z);
       for (int x = 0; x < width; ++x) {
@@ -103,6 +105,8 @@ static void new_map() {
           wattroff(mapw, A_REVERSE);
       }
     }
+
+    // draw numbers at the top
     for (int x = 0; x < width; ++x)
       mvwprintw(mapw, 0, x * 2 + 2, "%-2d", x);
 
@@ -114,12 +118,13 @@ static void new_map() {
     if (tile)
       wattroff(mapw, A_REVERSE);
 
-    move(yof - 1, 1);
+    // draw cursor arrows at the sides
+    move(yof + 1, 1);
     clrtoeol();
-    mvaddstr(yof - 1, cursor.x * 2 + xof + 2, "vv");
+    mvaddstr(yof + 1, cursor.x * 2 + xof + 2, "vv");
     for (int z = 0; z < depth; ++z)
-      mvaddch(yof + z + 1, xof - 1, ' ');
-    mvaddch(cursor.y + yof + 1, xof - 1, '>');
+      mvaddch(yof + z + 3, xof - 1, ' ');
+    mvaddch(cursor.y + yof + 3, xof - 1, '>');
 
     refresh();
     wrefresh(mapw);
@@ -167,7 +172,7 @@ static void new_map() {
       case 'e': {
         curs_set(1);
         echo();
-        mvaddstr(yof + depth + 2, 0,
+        mvaddstr(yof + depth + 4, 0,
             "Enter filename (leave empty for level.vxl): ");
         char filename[50];
         getnstr(filename, 50);
@@ -180,7 +185,7 @@ static void new_map() {
 
         std::ofstream ofs(filename, std::ofstream::out);
         if (!ofs) {
-          mvaddstr(yof + depth + 3, 0, "Error opening file.");
+          mvaddstr(yof + depth + 5, 0, "Error opening file.");
           refresh();
           break;
         }
@@ -193,7 +198,7 @@ static void new_map() {
                 ofs << "v " << x << " " << y << " " << z
                   << std::endl;
         ofs.close();
-        mvaddstr(yof+depth+3, 0, "Save successful.");
+        mvaddstr(yof + depth + 5, 0, "Save successful.");
         break;
       }
       default:
