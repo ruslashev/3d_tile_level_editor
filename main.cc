@@ -2,6 +2,7 @@
 #include <cstring>
 #include <ncurses.h>
 #include <string>
+#include <vector>
 
 static void new_map();
 static void start_screen();
@@ -52,6 +53,8 @@ get_choice:
   }
 }
 
+typedef std::vector<std::vector<std::vector<int>>> map_t;
+
 static void new_map() {
   int width, height, depth;
   ask_dimensions(&width, &height, &depth);
@@ -61,15 +64,10 @@ static void new_map() {
   clear();
   curs_set(0); // set terminal cursor to invisible
 
-  int map[depth][height][width];
+  map_t map(depth, std::vector<std::vector<int>>(height, std::vector<int>(width, 0)));
 
-  for (int z = 0; z < depth; z++)
-    for (int y = 0; y < height; y++)
-      for (int x = 0; x < width; x++)
-        map[z][y][x] = 0;
-
-  const int xof = 1, yof = 0;
-  WINDOW *mapw = newwin(depth + 2, width * 2 + 2 + 1, yof + 2, xof);
+  const int xof = 0, yof = 0;
+  WINDOW *mapw = newwin(depth + 2, width * 2 + 2 + 1, yof + 2, xof + 1);
   box(mapw, 0, 0);
   struct { int x, y; } cursor = { 0, 0 };
 
@@ -86,14 +84,15 @@ static void new_map() {
     "q          - quit"
   };
   for (int i = 0; i < help_text_lines; ++i)
-    mvaddstr(yof + i + 2, xof + width * 2 + 2 + 1 + 2, help_text[i]);
+    mvaddstr(yof + i + 2, xof + width * 2 + 6, help_text[i]);
 
   int height_level = 0, input = 0;
 
   while (input != 'q') {
-    mvprintw(yof, xof, "Height level: %d", height_level, cursor.x, cursor.y);
+    mvprintw(yof, xof + 1, "Height level: %d  " // extra spaces on purpose
+        , height_level, cursor.x, cursor.y);
 
-    // draw map and numbers to the right
+    // draw map and numbers to the left
     for (int z = 0; z < depth; ++z) {
       mvwprintw(mapw, z + 1, 0, "%-2d", z);
       for (int x = 0; x < width; ++x) {
@@ -121,10 +120,10 @@ static void new_map() {
     // draw cursor arrows at the sides
     move(yof + 1, 1);
     clrtoeol();
-    mvaddstr(yof + 1, cursor.x * 2 + xof + 2, "vv");
+    mvaddstr(yof + 1, cursor.x * 2 + xof + 3, "vv");
     for (int z = 0; z < depth; ++z)
-      mvaddch(yof + z + 3, xof - 1, ' ');
-    mvaddch(cursor.y + yof + 3, xof - 1, '>');
+      mvaddch(yof + z + 3, xof, ' ');
+    mvaddch(cursor.y + yof + 3, xof, '>');
 
     refresh();
     wrefresh(mapw);
@@ -132,29 +131,17 @@ static void new_map() {
     input = getch();
     switch (input) {
       // Moving =====================================================
-      case KEY_LEFT:
-        if (cursor.x > 0)
-          cursor.x--;
-        break;
-      case KEY_RIGHT:
-        if (cursor.x < width - 1)
-          cursor.x++;
-        break;
-      case KEY_UP:
-        if (cursor.y > 0)
-          cursor.y--;
-        break;
-      case KEY_DOWN:
-        if (cursor.y < depth - 1)
-          cursor.y++;
-        break;
+      case KEY_LEFT:  if (cursor.x > 0)         --cursor.x; break;
+      case KEY_RIGHT: if (cursor.x < width - 1) ++cursor.x; break;
+      case KEY_UP:    if (cursor.y > 0)         --cursor.y; break;
+      case KEY_DOWN:  if (cursor.y < depth - 1) ++cursor.y; break;
       case 'j':
         if (height_level > 0)
-          height_level--;
+          --height_level;
         break;
       case 'k':
         if (height_level < height - 1)
-          height_level++;
+          ++height_level;
         break;
         // Modifying ==================================================
       case 32: // space
@@ -174,12 +161,10 @@ static void new_map() {
         echo();
         mvaddstr(yof + depth + 4, 0,
             "Enter filename (leave empty for level.vxl): ");
-        char filename[50];
-        getnstr(filename, 50);
-        if (strcmp(filename, "\n") == 0)
+        char filename[256];
+        getnstr(filename, 256);
+        if (strcmp(filename, "\n") == 0 || strcmp(filename, "") == 0)
           strcpy(filename, "level.vxl");
-        if (strcmp(filename, ".vxl") >= 0)
-          strncat(filename, ".vxl", 50-strlen(filename)-1);
         noecho();
         curs_set(0);
 
@@ -197,6 +182,7 @@ static void new_map() {
               if (map[z][y][x])
                 ofs << "v " << x << " " << y << " " << z
                   << std::endl;
+        ofs << std::endl;
         ofs.close();
         mvaddstr(yof + depth + 5, 0, "Save successful.");
         break;
